@@ -7,6 +7,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.Toast;
 
 import com.example.administrator.myapp.audio.AudioRecordButton;
 
@@ -31,19 +32,19 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onFinished(float seconds, String filePath) {
                 String dest = new File(getExternalCacheDir(), "encode.amr").getAbsolutePath();
-                Jni.d(filePath, dest);
+                Jni.encode(filePath, dest);
+                Toast.makeText(MainActivity.this, dest, Toast.LENGTH_SHORT).show();
+
             }
         });
-//        new LoadTask(getApplication()).execute();
+        new LoadTask(getApplication()).execute();
     }
 
     public void onClick(View view) {
-//        String s = mItems.get(0);
-//        String dest = Environment.getExternalStorageDirectory() + "/"  + "sdfadf.mp3";;
-//        int x = Jni.x(s, dest);
-//        Log.d("MainActivity", "x:" + x);
-
-
+        String s = mItems.get(0);
+        String dest = Environment.getExternalStorageDirectory() + "/sdfadf.mp3";;
+        Jni.decode(s, dest);
+        Toast.makeText(this, dest, Toast.LENGTH_SHORT).show();
     }
 
 
