@@ -19,14 +19,12 @@ extern "C"
 #define  LOGE(...)  __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
 JNICALL jint decoder(JNIEnv *env, jclass clazz, jstring src, jstring dest) {
-    LOGI("调用 C xx() 方法\n");
     const char *str_c = env->GetStringUTFChars(src, 0);
     const char *dest_c = env->GetStringUTFChars(dest, 0);
 
     const char *tmp = "/data/data/com.example.administrator.myapp/t.t";
 
     if (x(str_c, tmp) == 0) {
-        LOGI("调用 C x(str_c, tmp)  方法\n");
         lame_t lame = lame_init();
         lame_set_in_samplerate(lame, 24000);
 
@@ -68,14 +66,12 @@ JNICALL jint decoder(JNIEnv *env, jclass clazz, jstring src, jstring dest) {
 JNICALL jint encoder(JNIEnv *env, jclass clazz, jstring src, jstring dest) {
     const char *str_c = env->GetStringUTFChars(src, 0);
     const char *dest_c = env->GetStringUTFChars(dest, 0);
-    LOGI("调用 C dc() 方法\n");
     encode(str_c, dest_c);
     return 0;
 }
 
 
 JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
-    LOGI("调用 C JNI_OnLoad() 方法\n");
     JNIEnv* env;
     if (vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK) {
         return -1;

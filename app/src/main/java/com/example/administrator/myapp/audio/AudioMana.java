@@ -213,7 +213,7 @@ public class AudioMana {
                 if (cAmplitude < 4000) {
                     return 1;
                 } else {
-                    return maxLevel * cAmplitude / 12000 + 1;
+                    return maxLevel * cAmplitude / 16000 + 1;
                 }
             } catch (Exception e) {
 

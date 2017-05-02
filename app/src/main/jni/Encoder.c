@@ -150,7 +150,6 @@ int encode( const char *src, const char *dest) {
 
     strcpy( speechInFileName, src);
     strcpy( bitOutFileName, dest);
-    LOGI("调用 C encode() 方sdfsdfsdf法\n");
 
 
     /* If no max internal is specified, set to minimum of API fs and 24 kHz */
