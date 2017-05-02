@@ -1,11 +1,8 @@
 package com.example.administrator.myapp.audio;
 
 import android.media.AudioFormat;
-import android.media.AudioManager;
 import android.media.AudioRecord;
-import android.media.AudioTrack;
 import android.media.MediaRecorder;
-import android.media.MediaSyncEvent;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -15,7 +12,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.UUID;
 
-public class AudioMana {
+public class AudioRecordManager {
 
     private final int sampleRateInHz = 24000;
 //    private MediaRecorder mRecorder;
@@ -43,17 +40,17 @@ public class AudioMana {
     /**
      * 单例化这个类
      */
-    private static AudioMana mInstance;
+    private static AudioRecordManager mInstance;
 
-    private AudioMana(String dir) {
+    private AudioRecordManager(String dir) {
         mDirString = dir;
     }
 
-    public static AudioMana getInstance(String dir) {
+    public static AudioRecordManager getInstance(String dir) {
         if (mInstance == null) {
-            synchronized (AudioMana.class) {
+            synchronized (AudioRecordManager.class) {
                 if (mInstance == null) {
-                    mInstance = new AudioMana(dir);
+                    mInstance = new AudioRecordManager(dir);
                 }
             }
         }
@@ -209,7 +206,7 @@ public class AudioMana {
         if (isPrepared) {
             try {
                 // 取证+1，否则去不到7
-                Log.d("AudioMana", "-----------cAmplitude:" + cAmplitude);
+                Log.d("AudioRecordManager", "-----------cAmplitude:" + cAmplitude);
                 if (cAmplitude < 4000) {
                     return 1;
                 } else {

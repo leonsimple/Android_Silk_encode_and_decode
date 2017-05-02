@@ -13,7 +13,7 @@ import com.example.administrator.myapp.R;
 
 
 //录音按钮核心类，包括点击、响应、与弹出对话框交互等操作。
-public class AudioRecordButton extends AppCompatButton implements AudioMana.AudioStageListener {
+public class AudioRecordButton extends AppCompatButton implements AudioRecordManager.AudioStageListener {
 
     //三个对话框的状态常量
     private static final int STATE_NORMAL = 1;
@@ -31,7 +31,7 @@ public class AudioRecordButton extends AppCompatButton implements AudioMana.Audi
     //录音对话框
     private DialogManager mDialogManager;
     //核心录音类
-    private AudioMana mAudioMana;
+    private AudioRecordManager mAudioRecordManager;
     //当前录音时长
     private float mTime = 0;
     // 是否触发了onlongclick，准备好了
@@ -75,9 +75,9 @@ public class AudioRecordButton extends AppCompatButton implements AudioMana.Audi
         mDialogManager = new DialogManager(getContext());
 
         //实例化录音核心类
-        mAudioMana = AudioMana.getInstance(context.getExternalCacheDir().getAbsolutePath());
+        mAudioRecordManager = AudioRecordManager.getInstance(context.getExternalCacheDir().getAbsolutePath());
 
-        mAudioMana.setOnAudioStageListener(this);
+        mAudioRecordManager.setOnAudioStageListener(this);
 
     }
 
@@ -134,7 +134,7 @@ public class AudioRecordButton extends AppCompatButton implements AudioMana.Audi
                 case MSG_VOICE_CHANGE:
                     //剩余10s
                     showRemainedTime();
-                    mDialogManager.updateVoiceLevel(mAudioMana.getVoiceLevel(9));
+                    mDialogManager.updateVoiceLevel(mAudioRecordManager.getVoiceLevel(9));
                     break;
                 case MSG_DIALOG_DIMISS:
 
@@ -142,8 +142,8 @@ public class AudioRecordButton extends AppCompatButton implements AudioMana.Audi
                 case MSG_VOICE_STOP:
                     isOverTime = true;//超时
                     mDialogManager.dismissDialog();
-                    mAudioMana.release();// release释放一个mediarecorder
-                    mListener.onFinished(mTime, mAudioMana.getCurrentFilePath());
+                    mAudioRecordManager.release();// release释放一个mediarecorder
+                    mListener.onFinished(mTime, mAudioRecordManager.getCurrentFilePath());
                     reset();// 恢复标志位
                     break;
 
@@ -222,22 +222,22 @@ public class AudioRecordButton extends AppCompatButton implements AudioMana.Audi
                 // 如果按的时间太短，还没准备好或者时间录制太短，就离开了，则显示这个dialog
                 if (!isRecording || mTime < 0.8f) {
                     mDialogManager.tooShort();
-                    mAudioMana.cancel();
+                    mAudioRecordManager.cancel();
                     mStateHandler.sendEmptyMessageDelayed(MSG_DIALOG_DIMISS, 1300);// 持续1.3s
                 } else if (mCurrentState == STATE_RECORDING) {//正常录制结束
                     if (isOverTime) return super.onTouchEvent(event);//超时
                     mDialogManager.dismissDialog();
-                    mAudioMana.release();// release释放一个mediarecorder
+                    mAudioRecordManager.release();// release释放一个mediarecorder
 
                     if (mListener != null) {// 并且callbackActivity，保存录音
 
-                        mListener.onFinished(mTime, mAudioMana.getCurrentFilePath());
+                        mListener.onFinished(mTime, mAudioRecordManager.getCurrentFilePath());
                     }
 
 
                 } else if (mCurrentState == STATE_WANT_TO_CANCEL) {
                     // cancel
-                    mAudioMana.cancel();
+                    mAudioRecordManager.cancel();
                     mDialogManager.dismissDialog();
                 }
                 reset();// 恢复标志位
@@ -253,9 +253,9 @@ public class AudioRecordButton extends AppCompatButton implements AudioMana.Audi
 
     private void prepared() {
         if (isCanRecord()) {
-            if (mAudioMana != null && !TextUtils.isEmpty(talkerId)) {
+            if (mAudioRecordManager != null && !TextUtils.isEmpty(talkerId)) {
                 mReady = true;
-                mAudioMana.prepareAudio();
+                mAudioRecordManager.prepareAudio();
             }
         }
     }
