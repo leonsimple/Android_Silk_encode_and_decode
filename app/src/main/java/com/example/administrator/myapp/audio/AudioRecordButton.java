@@ -9,9 +9,11 @@ import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 
+import com.example.administrator.myapp.R;
+
 
 //录音按钮核心类，包括点击、响应、与弹出对话框交互等操作。
-public class AudioRecordButton extends AppCompatButton implements AudioManager.AudioStageListener {
+public class AudioRecordButton extends AppCompatButton implements AudioMana.AudioStageListener {
 
     //三个对话框的状态常量
     private static final int STATE_NORMAL = 1;
@@ -26,7 +28,10 @@ public class AudioRecordButton extends AppCompatButton implements AudioManager.A
     private int mCurrentState = STATE_NORMAL;
     // 正在录音标记
     private boolean isRecording = false;
-    private AudioManager mAudioManager;
+    //录音对话框
+    private DialogManager mDialogManager;
+    //核心录音类
+    private AudioMana mAudioMana;
     //当前录音时长
     private float mTime = 0;
     // 是否触发了onlongclick，准备好了
@@ -67,11 +72,12 @@ public class AudioRecordButton extends AppCompatButton implements AudioManager.A
         super(context, attrs);
         mContext = context;
         //初始化语音对话框
+        mDialogManager = new DialogManager(getContext());
 
         //实例化录音核心类
-        mAudioManager = AudioManager.getInstance(context.getExternalCacheDir().getAbsolutePath());
+        mAudioMana = AudioMana.getInstance(context.getExternalCacheDir().getAbsolutePath());
 
-        mAudioManager.setOnAudioStageListener(this);
+        mAudioMana.setOnAudioStageListener(this);
 
     }
 
@@ -119,6 +125,7 @@ public class AudioRecordButton extends AppCompatButton implements AudioManager.A
             switch (msg.what) {
                 case MSG_AUDIO_PREPARED:
                     // 显示应该是在audio end prepare之后回调
+                    mDialogManager.showRecordingDialog();
                     isRecording = true;
                     new Thread(mGetVoiceLevelRunnable).start();
 
@@ -127,14 +134,16 @@ public class AudioRecordButton extends AppCompatButton implements AudioManager.A
                 case MSG_VOICE_CHANGE:
                     //剩余10s
                     showRemainedTime();
+                    mDialogManager.updateVoiceLevel(mAudioMana.getVoiceLevel(9));
                     break;
                 case MSG_DIALOG_DIMISS:
 
                     break;
                 case MSG_VOICE_STOP:
                     isOverTime = true;//超时
-                    mAudioManager.release();// release释放一个mediarecorder
-                    mListener.onFinished(mTime, mAudioManager.getCurrentFilePath());
+                    mDialogManager.dismissDialog();
+                    mAudioMana.release();// release释放一个mediarecorder
+                    mListener.onFinished(mTime, mAudioMana.getCurrentFilePath());
                     reset();// 恢复标志位
                     break;
 
@@ -153,6 +162,7 @@ public class AudioRecordButton extends AppCompatButton implements AudioManager.A
                 isShcok = true;
                 doShock();
             }
+            mDialogManager.getTipsTxt().setText("还可以说" + remainTime + "秒  ");
         }
 
     }
@@ -211,21 +221,24 @@ public class AudioRecordButton extends AppCompatButton implements AudioManager.A
                 }
                 // 如果按的时间太短，还没准备好或者时间录制太短，就离开了，则显示这个dialog
                 if (!isRecording || mTime < 0.8f) {
-                    mAudioManager.cancel();
+                    mDialogManager.tooShort();
+                    mAudioMana.cancel();
                     mStateHandler.sendEmptyMessageDelayed(MSG_DIALOG_DIMISS, 1300);// 持续1.3s
                 } else if (mCurrentState == STATE_RECORDING) {//正常录制结束
                     if (isOverTime) return super.onTouchEvent(event);//超时
-                    mAudioManager.release();// release释放一个mediarecorder
+                    mDialogManager.dismissDialog();
+                    mAudioMana.release();// release释放一个mediarecorder
 
                     if (mListener != null) {// 并且callbackActivity，保存录音
 
-                        mListener.onFinished(mTime, mAudioManager.getCurrentFilePath());
+                        mListener.onFinished(mTime, mAudioMana.getCurrentFilePath());
                     }
 
 
                 } else if (mCurrentState == STATE_WANT_TO_CANCEL) {
                     // cancel
-                    mAudioManager.cancel();
+                    mAudioMana.cancel();
+                    mDialogManager.dismissDialog();
                 }
                 reset();// 恢复标志位
                 break;
@@ -240,9 +253,9 @@ public class AudioRecordButton extends AppCompatButton implements AudioManager.A
 
     private void prepared() {
         if (isCanRecord()) {
-            if (mAudioManager != null && !TextUtils.isEmpty(talkerId)) {
+            if (mAudioMana != null && !TextUtils.isEmpty(talkerId)) {
                 mReady = true;
-                mAudioManager.prepareAudio();
+                mAudioMana.prepareAudio();
             }
         }
     }
@@ -284,15 +297,20 @@ public class AudioRecordButton extends AppCompatButton implements AudioManager.A
             mCurrentState = state;
             switch (mCurrentState) {
                 case STATE_NORMAL:
+                    setText(mContext.getString(R.string.long_click_record));//长按录音
                     break;
                 case STATE_RECORDING:
+                    setText(R.string.hang_up_finsh);//松开结束
                     if (isRecording) {
                         // 复写dialog.recording();
+                        mDialogManager.recording();
                     }
                     break;
 
                 case STATE_WANT_TO_CANCEL:
+                    setText(R.string.release_cancel);//松开取消
                     // dialog want to cancel
+                    mDialogManager.wantToCancel();
                     break;
 
             }

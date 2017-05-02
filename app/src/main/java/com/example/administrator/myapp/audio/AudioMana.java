@@ -1,9 +1,13 @@
 package com.example.administrator.myapp.audio;
 
 import android.media.AudioFormat;
+import android.media.AudioManager;
 import android.media.AudioRecord;
+import android.media.AudioTrack;
 import android.media.MediaRecorder;
+import android.media.MediaSyncEvent;
 import android.text.TextUtils;
+import android.util.Log;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -11,7 +15,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.UUID;
 
-public class AudioManager {
+public class AudioMana {
 
     private final int sampleRateInHz = 24000;
 //    private MediaRecorder mRecorder;
@@ -26,6 +30,7 @@ public class AudioManager {
     private AudioRecord mAudioRecord;
     private int minBuffer;
     private FileOutputStream outputStream;
+    private int mAmplitude;
 
     public String getFilePath() {
         return mFilePath;
@@ -38,17 +43,17 @@ public class AudioManager {
     /**
      * 单例化这个类
      */
-    private static AudioManager mInstance;
+    private static AudioMana mInstance;
 
-    private AudioManager(String dir) {
+    private AudioMana(String dir) {
         mDirString = dir;
     }
 
-    public static AudioManager getInstance(String dir) {
+    public static AudioMana getInstance(String dir) {
         if (mInstance == null) {
-            synchronized (AudioManager.class) {
+            synchronized (AudioMana.class) {
                 if (mInstance == null) {
-                    mInstance = new AudioManager(dir);
+                    mInstance = new AudioMana(dir);
                 }
             }
         }
@@ -87,6 +92,15 @@ public class AudioManager {
             } else {
                 file = new File(mFilePath);
             }
+
+            try {
+                file = new File(mDirString, "test.pcm");
+                outputStream = new FileOutputStream(file);
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+                return;
+            }
+
             //获取文件
             mCurrentFilePathString = file.getAbsolutePath();
 
@@ -104,6 +118,13 @@ public class AudioManager {
 //
 //            mRecorder.start();
 
+            minBuffer = AudioRecord.getMinBufferSize(sampleRateInHz, AudioFormat.CHANNEL_IN_MONO,
+                    AudioFormat.ENCODING_PCM_16BIT);
+
+            mAudioRecord = new AudioRecord(
+                    MediaRecorder.AudioSource.MIC, sampleRateInHz,
+                    AudioFormat.CHANNEL_IN_MONO,
+                    AudioFormat.ENCODING_PCM_16BIT, sampleRateInHz * 2);
 
             // 准备结束
             isPrepared = true;
@@ -129,26 +150,13 @@ public class AudioManager {
     }
 
     private void startRecording() {
-
-        minBuffer = AudioRecord.getMinBufferSize(sampleRateInHz, AudioFormat.CHANNEL_IN_MONO,
-                AudioFormat.ENCODING_PCM_16BIT);
-
-        mAudioRecord = new AudioRecord(
-                MediaRecorder.AudioSource.MIC, sampleRateInHz,
-                AudioFormat.CHANNEL_IN_MONO,
-                AudioFormat.ENCODING_PCM_16BIT, sampleRateInHz * 2);
-
-
-        //5 seconds data
-        byte[] buffer = new byte[sampleRateInHz * 2 * 5];
-
-        try {
-            File file = new File(mDirString, "test.pcm");
-            mCurrentFilePathString = file.getAbsolutePath();
-            outputStream = new FileOutputStream(file);
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
+        if (null == mAudioRecord) {
+            return;
         }
+
+        android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
+
+        byte[] buffer = new byte[sampleRateInHz * 2 * 5];
 
         mAudioRecord.startRecording();
 
@@ -158,7 +166,14 @@ public class AudioManager {
 
             bytesRead = mAudioRecord.read(buffer, 0, minBuffer);
 
+                cAmplitude = 0;
             if (bytesRead > 0) {
+                for (int i=0; i < bytesRead / 2; i++) {
+                    short curSample = getShort(buffer[i*2], buffer[i*2+1]);
+                    if (curSample > cAmplitude) {
+                        cAmplitude = curSample;
+                    }
+                }
                 try {
                     outputStream.write(buffer, 0, bytesRead);
                 } catch (IOException e) {
@@ -174,7 +189,11 @@ public class AudioManager {
         }
 
     }
+    private int cAmplitude= 0;
 
+    private short getShort(byte argB1, byte argB2) {
+        return (short)(argB1 | (argB2 << 8));
+    }
 
     /**
      * 随机生成文件的名称
@@ -186,19 +205,23 @@ public class AudioManager {
     }
 
     // 获得声音的level
-//    public int getVoiceLevel(int maxLevel) {
-//        // mRecorder.getMaxAmplitude()这个是音频的振幅范围，值域是1-32767
-//        if (isPrepared) {
-//            try {
-//                // 取证+1，否则去不到7
-//                return maxLevel * mRecorder.getMaxAmplitude() / 32768 + 1;
-//            } catch (Exception e) {
-//
-//            }
-//        }
-//
-//        return 1;
-//    }
+    public int getVoiceLevel(int maxLevel) {
+        if (isPrepared) {
+            try {
+                // 取证+1，否则去不到7
+                Log.d("AudioMana", "-----------cAmplitude:" + cAmplitude);
+                if (cAmplitude < 4000) {
+                    return 1;
+                } else {
+                    return maxLevel * cAmplitude / 12000 + 1;
+                }
+            } catch (Exception e) {
+
+            }
+        }
+
+        return 1;
+    }
 
     // 释放资源
     public void release() {
@@ -206,13 +229,13 @@ public class AudioManager {
 //        if (mRecorder == null) return;
         try {
             if (isPrepared) {
+                isPrepared = false;
                 mAudioRecord.stop();
                 mAudioRecord.release();
+                mAudioRecord = null;
 //                mRecorder.stop();
 //                mRecorder.release();
-                mAudioRecord = null;
 //                mRecorder = null;
-                isPrepared = false;
             }
         } catch (Exception e) {
             e.printStackTrace();

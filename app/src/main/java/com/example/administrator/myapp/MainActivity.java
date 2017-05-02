@@ -2,10 +2,9 @@ package com.example.administrator.myapp;
 
 import android.content.Context;
 import android.os.AsyncTask;
+import android.os.Bundle;
 import android.os.Environment;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
@@ -30,11 +29,21 @@ public class MainActivity extends AppCompatActivity {
         audioButton.setTalkerId("1231");
         audioButton.setAudioFinishRecorderListener(new AudioRecordButton.AudioFinishRecorderListener() {
             @Override
-            public void onFinished(float seconds, String filePath) {
-                String dest = new File(getExternalCacheDir(), "encode.amr").getAbsolutePath();
-                Jni.encode(filePath, dest);
-                Toast.makeText(MainActivity.this, dest, Toast.LENGTH_SHORT).show();
+            public void onFinished(float seconds, final String filePath) {
+                final String dest = new File(getExternalCacheDir(), "encode.amr").getAbsolutePath();
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Jni.encode(filePath, dest);
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
 
+                                Toast.makeText(MainActivity.this, dest, Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+                }).start();
             }
         });
         new LoadTask(getApplication()).execute();
@@ -42,7 +51,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void onClick(View view) {
         String s = mItems.get(0);
-        String dest = Environment.getExternalStorageDirectory() + "/sdfadf.mp3";;
+        String dest = Environment.getExternalStorageDirectory() + "/decode.mp3";
         Jni.decode(s, dest);
         Toast.makeText(this, dest, Toast.LENGTH_SHORT).show();
     }
